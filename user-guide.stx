@@ -1,0 +1,96 @@
+title: Weblocks User Guide
+author: Leslie P. Polzer
+date: 2008-10-30
+language: english
+
+This is the user guide to Weblocks.
+
+https://0brg.net/~hraban/blog/2008/a-laymans-guide-to-weblocks
+http://teddyb.org/rlp/tiki-index.php?page=Learning+About+Weblocks
+
+CODE_BEGIN LISP
+(defun foo ()
+  (format t "Hooray! And up she rises...~%"))
+CODE_END
+
+
+! Installation
+
+
+! Setting up a project
+
+ASD, script, base on demo, ...
+
+
+
+! Widgets
+
+
+! Actions
+
+
+! Dependencies
+
+
+! HTML generation
+
+!! CL-WHO
+
+examples to point out pitfalls
+
+
+!! HTML abstractions
+
+!!! WITH-HTML-FORM
+
+
+! CSS generation
+
+FIXME: implement first ;)
+
+! Adapting Weblocks to your needs
+!! Introduction, Hooks
+
+Every GF is a hook: subclass, :before, :around, :after
+
+!! Writing a presentation
+
+!! Writing a form field parser
+
+!! Writing a dispatcher
+
+!! Integrating 3rd party Javascript
+
+
+! Webapps
+
+
+
+! Working with continuations
+
+!! Introduction
+!! Widget continuations
+!! Using the high-level interfaces
+
+
+
+! Debugging Techniques
+
+TRACE (beware builtin funs), BACKTRACE, DESCRIBE
+If no errors show up (sometimes occurs e.g. when working with continuations!)
+try *CATCH-ERRORS-P*
+
+
+! Contributing
+
+# checkout branch
+# make changes
+!! test changes (how?)
+Run a specific test case: (run-test :test-case 'make-dialog-js-3 :suite 'composite-suite)
+
+# add tests (where?)
+# make patch
+# discussion/review
+
+http://lighthouseapp.com/help/setting-up-subversion-integration
+
