@@ -1,0 +1,20 @@
+
+Prerequisites:
+
+SBCL, Pygments with the `pygmentize' binary, stx2any
+
+
+Usage:
+
+  ./transform-document.sh doc.stx
+
+This will produce HTML output named doc.stx.html
+
+Sections marked thus:
+
+CODE_BEGIN lisp
+...
+CODE_END
+
+will be highlighted as Common Lisp.
+

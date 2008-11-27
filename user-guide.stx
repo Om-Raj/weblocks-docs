@@ -8,10 +8,9 @@ This is the user guide to Weblocks.
 https://0brg.net/~hraban/blog/2008/a-laymans-guide-to-weblocks
 http://teddyb.org/rlp/tiki-index.php?page=Learning+About+Weblocks
 
-CODE_BEGIN LISP
-(defun foo ()
-  (format t "Hooray! And up she rises...~%"))
-CODE_END
+<div class="highlight"><pre><span class="p">(</span><span class="nb">defun</span> <span class="nv">foo</span> <span class="p">()</span>
+  <span class="p">(</span><span class="nb">format</span> <span class="no">t</span> <span class="s">&quot;Hooray! And up she rises...~%&quot;</span><span class="p">))</span>
+</pre></div>
 
 
 ! Installation
