@@ -1,0 +1,3 @@
+hunk ./projects 47
+-babel get_darcs http://common-lisp.net/~loliveira/darcs/babel #charset encoder/decoder
++babel get_darcs http://common-lisp.net/project/babel/darcs/babel #charset encoder/decoder

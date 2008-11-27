@@ -1,0 +1,1 @@
+/home/sky/projects/lisp/weblocks/manual/clbuild/source/cffi/uffi-compat/uffi.asd
