@@ -24,6 +24,34 @@ ASD, script, base on demo, ...
 
 ! Widgets
 
+=== Widgets (basics)
+
+= Intro
+
+Widgets are lisp classes (of metaclass widget) declared using the defwidget macro. They are associated with a rendering (the GF render-widget-body) function, which is reponsible for creating the html associated with the widget. The framework will take this html and write it into a div with an id unique to the widget. Using metaclass hooks, whenever the widget object in lisp is changed, an updated html representation is sent out at the next http request (or ajax request).
+
+Additionally, widgets can be composed. Thus a widget tree is formed, the root of which is given by (root-composite). Each widget keeps track of its parent, and remembers when it has been changed (ie is dirty). Widgets propagate their dirty state upwards through the tree of their parents TODO --check.
+
+As a convenience, strings and functions also function as widget -- ie the render-widget-body GF is specialized for strings and functions. In practice this leads to a lot of confusion regarding updates and other things, so we ignore it for now.
+
+= Common Errors
+
+One of the most common is missing updates because of a missing widget. 
+The widget can be missing in many ways: one is creating a widget *inside* a rendering function.
+Example: 
+
+(defmethod render-widget-body ((a widget))
+  (with-html ... object a stuff)
+  (render-widget-body (make-instance 'b ( ... some params we make up))))
+
+In this case, the widget b will get rendered once, but all updates will be lost! The solution is to make the widget 'a' derive from composite [ (defwidget a (composite) ... ] and then make that last r-w-b call into (call-next-method) or (r-w-b X) where X is the widget of type b contained within a.
+
+TODO look at newsgroup for more examples. 
+
+= Questions (infrequent)
+
+Can widgets map to other rendering hierarchies like XUL/SVG? In principle yes. However, all of weblocks assumes one rendering system, based on html. The method of sending updates also relies somewhat on html (or at least a browser/ua that uses JS and http?).
+
 
 ! Actions
 
@@ -43,11 +71,115 @@ examples to point out pitfalls
 !!! WITH-HTML-FORM
 
 
+! Views forms presentations parsers 
+
+=== Rules and guidelines for using defview.
+
+== Introduction
+
+views are the second highest level mechanism (after forms) in the weblocks
+system of forms, views, presentations & parsers that form the rendering
+framework for structured data. views are defined using defview.
+
+defview is a macro that in turn calls defview-anon. defview-anon is not visible
+outside weblocks -- if you have to use it, call it with weblocks::defview-anon.
+defview-anon actually makes the view, defview attaches a gensym'd name to it
+and stores it in the global views hash.
+
+so all views are global, and any changes made to one show up in all the others (at least after a refresh of the browser).
+
+== Views are singletons
+
+this makes it hard to do per-view things. two examples of these per-view things
+you may want to do are:
+
+1. translate labels or use specific labels (perhaps per-session, per-user if users have different language preferences)
+2. use different submit buttons, or fields-suffix and -prefix functions (see the definition of form-view in formview.lisp)
+
+a partial solution is to make the basic view you need with defview, and then
+create an on-the-fly specific view using defview-anon and using the initializer
+:inherit-from '<your-specific-view-name> (there should be only a single quote
+char).
+
+in this case however, you will often have to respecify many things about the view.
+TODO: it appears fields are copied without problem in view inheritance, but *not* other things such as type
+of view, satisfiers etc. (see functions get-object-view-fields and compute-view-field-info-list in utils.lisp)
+
+the solution above is partial because at the moment views are not garbage collected, but this
+is being looked into.
+
+to this view you can adjust labels, fields functions as needed, and it will not
+affect any other view. to use the view you must specifically tell the dataform
+to use it, or use make-quickform -- which lets you specify the view as the
+first parameter.
+
+== View gotchas
+
+Inside a view, specifying 
+  :buttons '((:submit . #!"translate_me") (:cancel . "Cancel")) 
+does not work -- function calls don't appear to be acceptable (in this example, #!"abc" expands to cl-i18n:translate("abc"))
+
+== Fields inside views
+
+views are made up of fields. at rendering time the framework needs both the
+data which this field represents, and the way it is to be presented and parsed,
+which is encoded in the view (in the form of present-as and parse-as, or the
+defaults for that view type).
+
+in addition, a context to the widget that rendering is happening in is maintained,
+thus most functions in the rendering hierarchy will have at least the args
+view, object & widget.
+
+fields are converted into field-info objects at rendering-time, which basically just
+involves encapsulating the actual object into a struct of type field-info.
+
+== Views inside views
+
+there is a special type of field definition in a view though: one that represents another view to be
+mixed in. in the following defview, this mixin-field is defined for location-details.
+
+(defview enter-details-of-person 
+  (:type form :inherit-from '(:scaffold co-employee) 
+	      :caption "Enter Personal Information" )
+  (location-details :type mixin :view 'location-form-view)
+  (contact-details  :type mixin :view 'contact-form-view)
+  (firstname :label "firstname")
+  (lastname  :label "lastname")
+  (sin   :hidep t)
+  (notes :label "Notes")
+  (company :label "Employer" ))
+
+imagine that the data object this view is defined for consists of several pieces of simple information,
+as well as one sub-object of class location-details, one of contact-details, and one of company. 
+
+in fact the class of the object we want to view could be defined as follows:
+
+(defclass mba-applicant (person)
+  ((firstname        :accessor get-firstname        :initarg :firstname		:initform "")
+   (lastname         :accessor get-lastname         :initarg :lastname		:initform "" :type (or string null))
+   (company          :accessor get-company          :initarg :company		:initform (make-instance 'company :company-name "Facade"))
+   (contact-details  :accessor get-location-details :initarg :location-details	:initform (make-instance 'contact  :cellphone "908" :email "foo@bar.com"))
+   (location-details :accessor get-location-details :initarg :location-details	:initform (make-instance 'location :city "Vatican" :location "Hades"))
+   (sin              :accessor get-sin              :initarg :sin		:initform "wants to be a manager all hoity-toity with an MBA")
+   (notes            :accessor get-notes            :initarg :notes		:initform "made up a 3 billion dollar company to put on his resume")))
+
+firstname et al. would normally be defined inside person. now the :initforms of each field of the class tell us the kind
+of object that is stored there. we can see that some fields are simple (strings, numbers and the like) and some complex
+(structs, objects). the former are represented by normal fields in views, and the latter by mixin fields.
+
+in addition, a :type specifier would also tell us what is permissible to store, as in lastname above. if specified, this is checked in validations.lisp when a form is being deserialized.
+
+== Getting the value of field data
+
+== Other ways of getting this value
+
+
 ! CSS generation
 
 FIXME: implement first ;)
 
 ! Adapting Weblocks to your needs
+
 !! Introduction, Hooks
 
 Every GF is a hook: subclass, :before, :around, :after
@@ -92,4 +224,141 @@ Run a specific test case: (run-test :test-case 'make-dialog-js-3 :suite 'composi
 # discussion/review
 
 http://lighthouseapp.com/help/setting-up-subversion-integration
+
+
+! Weblocks Community
+
+=== Weblocks community
+
+== Mercurial Bitbucket 
+
+See tutorial at http://trac.common-lisp.net/cl-weblocks/wiki/WeblocksDevelopment
+
+Weblocks as a project maintains its source in mercurial. Hosting is provided by
+bitbucket.org -- accounts are free (and you get one private repo for free).
+Space limits are generous, 150MB or so. There is an irc channel
+(#bitbucket.org) with helpful admins but you should not need it. SSH keys are
+supported, so once that is setup starting is as easy as creating a repository
+using the web interface, then (nunb is the user, repo-name is the repo you just
+created):
+
+hg clone ssh://hg@bitbucket.org/nunb/repo-name
+.. edit files in your new local repo (dir repo-name) .. now commit your changes:
+hg commit 
+hg push
+.. push them out to the parent, and your changes are now safely stored at bitbucket ..
+
+= Contributing changes 
+
+This section paraphrased from jespern at #bitbucket.org -- thanks!
+
+Use web interface and create a fork, say weblocks-mine. Clone it locally, and
+use it everyday.  Make your changes to it, and push as necessary. Now you can
+send a pull request to the weblocks
+maintainers to pull a cool feature you've added.
+
+Generally, you can put your stuff in the subdir contrib. This keeps it out of
+everyone's way and yet makes it available. But then divergences from weblocks
+will be silently missed.  If your code change is core and useful enough,
+consider adding it to the main src and possibly adding to weblocks.asd
+
+Note, your fork will *not* keep getting updated with the main line changes, you
+have to keep it in sync yourself.
+
+That's pretty easy to do, you just pull changes from the weblocks mainline when
+necessary, you do not need to log onto the web interface either.
+
+For example, in the local shell in your forked directory root, just do 'hg pull -u https://bitbucket.org/skypher/weblocks-stable/'
+
+Now, in the repo dir, the command 'hg pull' will by default pull from the place
+you cloned it -- which is your private fork. If you only work on this local
+machine, you don't really need to update from that fork, but rather from the
+mainline.
+
+To make the command shorter create an alias for the mainline: 
+
+<jespern> you can edit .hg/hgrc in your forked repo, and in the [paths]
+          section, just add something like 'orig = https://...', then you can
+          do 'hg pull -u orig'   
+
+Also: read up on patch queues if you only want to keep mainline up to date.
+However, there has been some discussion that weblocks won't use patch queues
+any more?
+
+<jespern> if you just want to contribute and keep the mainline up to date, you
+	  may want to consider working on a patch queue instead of a fork
+
+== Frequent newbie hg issue
+
+(This section paraphrased from conversation with Leslie Polzer -- thanks!).
+
+Often, if you are making changes, and try to do 'hg pull -u' (or hg pull
+followed by hg update) your changes clash with others. The error message is:
+
+Upstream changes TODO exact message?
+
+The best way of dealing with it is to commit your local changes.. option a) below.
+
+Handling the error message (follow these steps after you get the error message)
+
+ 1. If there are no uncommitted working directory changes,
+    just issue "hg fetch".
+
+ 2. If there are yet uncommitted working directory changes
+    either
+
+    a) Commit them and go to 1.
+
+    b) Park them somewhere else with "hg diff", then do "hg fetch"
+       and re-apply the diff with "patch".
+
+    c) Use the Shelve extension to make option b) more convenient:
+
+       `hg shelve && hg fetch && hg unshelve`
+
+
+== Lighthouse Trac
+
+Originally weblocks was on trac, and there was a wiki there. Because lighthouse
+offers better issue tracking, weblocks now has an open issues/bugtracker on
+lighthouse.
+
+A new wiki is needed?
+
+== Tutorials, sites, blogs
+
+== In progress enhancements
+
+These are things that are in the process of being re-worked. (This list is more suited to the wiki since it needs updating)
+
+* label-for
+* new navigation system
+* reworking of views and fields
+* reworking widget rendering tree and convenience functions to access it
+! Framework Comparison
+
+=== Weblocks compared to other frameworks
+
+This might be a useful chapter to have. To contribute, please put amount of experience with the frameworks you are comparing.
+
+Weblocks: 1 year, 6 mo. intensive.
+
+Django:		read basics at djangobook.com
+	  	Django works at a level similar to hunchentoot. A series of urls is mapped to functions. Templates can be used to fill in html.
+		Uses mvc.
+
+Python:		Twisted?
+		Google App Engine?
+
+Rails:    	3 months. 
+		Uses mvc. Ruby has some nice language features. Framework is backwards, and forces you to repeat yourself many times. A guiding
+		principle is to not repeat yourself (colloquially DRY) and in combination with a poor DSL it can be quite gibberishy.
+
+Ruby:		Other?
+
+Perl:		Mason?
+
+PHP:		Cake?
+
+
 
