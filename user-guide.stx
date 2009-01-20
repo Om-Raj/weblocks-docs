@@ -6,7 +6,7 @@ language: english
 This is the user guide to Weblocks.
 
 https://0brg.net/~hraban/blog/2008/a-laymans-guide-to-weblocks
-http://teddyb.org/rlp/tiki-index.php?page=Learning+About+Weblocks
+http://teddyb.org/rlp/tiki-index.php?page!Learning+About+Weblocks
 
 <div class="highlight"><pre><span class="p">(</span><span class="nb">defun</span> <span class="nv">foo</span> <span class="p">()</span>
   <span class="p">(</span><span class="nb">format</span> <span class="no">t</span> <span class="s">&quot;Hooray! And up she rises...~%&quot;</span><span class="p">))</span>
@@ -20,35 +20,42 @@ http://teddyb.org/rlp/tiki-index.php?page=Learning+About+Weblocks
 
 ASD, script, base on demo, ...
 
+! Widgets (basics)
+
+!!! Intro
 
 
-! Widgets
+Widgets are lisp classes (of metaclass widget) declared using the defwidget
+macro. They are associated with a rendering function, [[ the generic function
+''render-widget-body'' ]]  which is reponsible for creating the html associated
+with the widget. Using metaclass hooks, whenever the widget object in lisp is
+changed, an updated html representation is sent out at the next http request
+(or ajax request).  [[ The framework will take this html and write it into a
+div with an id unique to the widget. Mostly one doesn't need to worry about it,
+but see [render-widget-body] for times when you do. ]]
 
-=== Widgets (basics)
+Additionally, widgets can be composed. Thus a widget tree is formed, the root
+of which is given by ''(root-composite)''. Each widget keeps track of its parent,
+and remembers when it has been changed (ie is dirty). Widgets propagate their
+dirty state upwards through the tree of their parents [[ TODO(check) ]].
 
-= Intro
+As a convenience, strings and functions also function as widgets -- ie the
+render-widget-body GF is specialized for strings and functions. In practice
+this leads to a lot of confusion regarding updates and other things, so we
+ignore it for now. Write a widget when you need one, at least while starting.
 
-Widgets are lisp classes (of metaclass widget) declared using the defwidget macro. They are associated with a rendering (the GF render-widget-body) function, which is reponsible for creating the html associated with the widget. The framework will take this html and write it into a div with an id unique to the widget. Using metaclass hooks, whenever the widget object in lisp is changed, an updated html representation is sent out at the next http request (or ajax request).
+! Common Errors
 
-Additionally, widgets can be composed. Thus a widget tree is formed, the root of which is given by (root-composite). Each widget keeps track of its parent, and remembers when it has been changed (ie is dirty). Widgets propagate their dirty state upwards through the tree of their parents TODO --check.
-
-As a convenience, strings and functions also function as widget -- ie the render-widget-body GF is specialized for strings and functions. In practice this leads to a lot of confusion regarding updates and other things, so we ignore it for now.
-
-= Common Errors
-
-One of the most common is missing updates because of a missing widget. 
+One of the most common problems is missing updates because of a missing widget. 
 The widget can be missing in many ways: one is creating a widget *inside* a rendering function.
 Example: 
 
-(defmethod render-widget-body ((a widget))
-  (with-html ... object a stuff)
-  (render-widget-body (make-instance 'b ( ... some params we make up))))
 
-In this case, the widget b will get rendered once, but all updates will be lost! The solution is to make the widget 'a' derive from composite [ (defwidget a (composite) ... ] and then make that last r-w-b call into (call-next-method) or (r-w-b X) where X is the widget of type b contained within a.
+In this case, the widget b will get rendered once, but all updates will be lost! The solution is to make the widget ''a'' derive from composite [[ ''(defwidget a (composite))'' ]] and then make that last r-w-b call into ''(call-next-method)'' or ''(r-w-b X)'' where ''X'' is the widget of type ''b'' contained within ''a''.
 
 TODO look at newsgroup for more examples. 
 
-= Questions (infrequent)
+! Questions (infrequent)
 
 Can widgets map to other rendering hierarchies like XUL/SVG? In principle yes. However, all of weblocks assumes one rendering system, based on html. The method of sending updates also relies somewhat on html (or at least a browser/ua that uses JS and http?).
 
@@ -73,9 +80,9 @@ examples to point out pitfalls
 
 ! Views forms presentations parsers 
 
-=== Rules and guidelines for using defview.
+!!! Rules and guidelines for using defview.
 
-== Introduction
+!! Introduction
 
 views are the second highest level mechanism (after forms) in the weblocks
 system of forms, views, presentations & parsers that form the rendering
@@ -88,7 +95,7 @@ and stores it in the global views hash.
 
 so all views are global, and any changes made to one show up in all the others (at least after a refresh of the browser).
 
-== Views are singletons
+!! Views are singletons
 
 this makes it hard to do per-view things. two examples of these per-view things
 you may want to do are:
@@ -113,13 +120,13 @@ affect any other view. to use the view you must specifically tell the dataform
 to use it, or use make-quickform -- which lets you specify the view as the
 first parameter.
 
-== View gotchas
+!! View gotchas
 
 Inside a view, specifying 
-  :buttons '((:submit . #!"translate_me") (:cancel . "Cancel")) 
-does not work -- function calls don't appear to be acceptable (in this example, #!"abc" expands to cl-i18n:translate("abc"))
 
-== Fields inside views
+does not work -- function calls don't appear to be acceptable (in this example, ''#!"abc"'' expands to ''cl-i18n:translate("abc")'')
+
+!! Fields inside views
 
 views are made up of fields. at rendering time the framework needs both the
 data which this field represents, and the way it is to be presented and parsed,
@@ -133,7 +140,7 @@ view, object & widget.
 fields are converted into field-info objects at rendering-time, which basically just
 involves encapsulating the actual object into a struct of type field-info.
 
-== Views inside views
+!! Views inside views
 
 there is a special type of field definition in a view though: one that represents another view to be
 mixed in. in the following defview, this mixin-field is defined for location-details.
@@ -169,9 +176,9 @@ of object that is stored there. we can see that some fields are simple (strings,
 
 in addition, a :type specifier would also tell us what is permissible to store, as in lastname above. if specified, this is checked in validations.lisp when a form is being deserialized.
 
-== Getting the value of field data
+!! Getting the value of field data
 
-== Other ways of getting this value
+!! Other ways of getting this value
 
 
 ! CSS generation
@@ -228,9 +235,9 @@ http://lighthouseapp.com/help/setting-up-subversion-integration
 
 ! Weblocks Community
 
-=== Weblocks community
+!!! Weblocks community
 
-== Mercurial Bitbucket 
+!! Mercurial Bitbucket 
 
 See tutorial at http://trac.common-lisp.net/cl-weblocks/wiki/WeblocksDevelopment
 
@@ -248,7 +255,7 @@ hg commit
 hg push
 .. push them out to the parent, and your changes are now safely stored at bitbucket ..
 
-= Contributing changes 
+! Contributing changes 
 
 This section paraphrased from jespern at #bitbucket.org -- thanks!
 
@@ -288,7 +295,7 @@ any more?
 <jespern> if you just want to contribute and keep the mainline up to date, you
 	  may want to consider working on a patch queue instead of a fork
 
-== Frequent newbie hg issue
+!! Frequent newbie hg issue
 
 (This section paraphrased from conversation with Leslie Polzer -- thanks!).
 
@@ -302,22 +309,22 @@ The best way of dealing with it is to commit your local changes.. option a) belo
 Handling the error message (follow these steps after you get the error message)
 
  1. If there are no uncommitted working directory changes,
-    just issue "hg fetch".
+    just issue ''hg fetch''.
 
  2. If there are yet uncommitted working directory changes
     either
 
     a) Commit them and go to 1.
 
-    b) Park them somewhere else with "hg diff", then do "hg fetch"
-       and re-apply the diff with "patch".
+    b) Park them somewhere else with ''hg diff'', then do ''hg fetch''
+       and re-apply the diff with ''patch''.
 
     c) Use the Shelve extension to make option b) more convenient:
 
-       `hg shelve && hg fetch && hg unshelve`
+       ''hg shelve && hg fetch && hg unshelve''
 
 
-== Lighthouse Trac
+!! Lighthouse Trac
 
 Originally weblocks was on trac, and there was a wiki there. Because lighthouse
 offers better issue tracking, weblocks now has an open issues/bugtracker on
@@ -325,9 +332,9 @@ lighthouse.
 
 A new wiki is needed?
 
-== Tutorials, sites, blogs
+!! Tutorials, sites, blogs
 
-== In progress enhancements
+!! In progress enhancements
 
 These are things that are in the process of being re-worked. (This list is more suited to the wiki since it needs updating)
 
@@ -337,7 +344,7 @@ These are things that are in the process of being re-worked. (This list is more 
 * reworking widget rendering tree and convenience functions to access it
 ! Framework Comparison
 
-=== Weblocks compared to other frameworks
+!!! Weblocks compared to other frameworks
 
 This might be a useful chapter to have. To contribute, please put amount of experience with the frameworks you are comparing.
 
