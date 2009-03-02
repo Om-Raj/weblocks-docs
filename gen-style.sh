@@ -1,1 +1,1 @@
-pygmentize -S autumn -f html > style.css
+pygmentize -S autumn -f html > pygments-style.css

@@ -3,18 +3,56 @@ author: Leslie P. Polzer
 date: 2008-10-30
 language: english
 
+w_begdiv(metas)
+dnl <link rel="stylesheet" type="text/css" href="reset.css"/>
+<link rel="stylesheet" type="text/css" href="pygments-style.css"/>
+<link rel="stylesheet" type="text/css" href="weblocks.css"/>
+w_enddiv(metas)
+
 This is the user guide to Weblocks.
 
 https://0brg.net/~hraban/blog/2008/a-laymans-guide-to-weblocks
 http://teddyb.org/rlp/tiki-index.php?page!Learning+About+Weblocks
 
-<div class="highlight"><pre><span class="p">(</span><span class="nb">defun</span> <span class="nv">foo</span> <span class="p">()</span>
-  <span class="p">(</span><span class="nb">format</span> <span class="no">t</span> <span class="s">&quot;Hooray! And up she rises...~%&quot;</span><span class="p">))</span>
-</pre></div>
-
-
 ! Installation
 
+!! Setup your Common Lisp environment
+
+You can skip this section if you already have a comfortable Common Lisp environment.
+
+!!! Common Lisp implementation
+
+First you must choose a Common Lisp implementation.
+
+Weblocks is designed and implemented to be portable and should run on the most popular
+Common Lisp implementations. It is currently tested best on SBCL and Clozure CL, though.
+
+!!! Development environment setup
+
+There are at least two fundamentally different development approaches for using
+Common Lisp:
+
+  # Editor-centric development: you access all Lisp functions from within your editor.
+
+    Example: Emacs/Slime, Vim/Limp, Lispworks/IDE.
+    
+    Incremental development happens mainly on the S-Expression level. This means that you
+    edit a SEXP and send it with the help of editor directly to your Lisp image, which
+    evaluates it, thus affecting the current Lisp environment.
+
+  # UNIX-style development: one tool for each job. The editor is not all that important
+    here (as long as you're comfortable with it and it supports at least a basic level
+    of paren highlighting.
+    
+    Example: Vim and your favorite terminal emulator. You start Vim in one window and
+    your Lisp in another. Interaction happens by reloading your applications ASDF system
+    and simple copy/paste of snippets.
+
+We will try to be largely agnostic of the development approach in this manual which actually
+means that we tend towards the second approach: Lisp calls are referred to by what you'd
+type in your REPL, not by Emacs shortcut as it is often the case.
+
+For a basic comfortable SBCL setup, see w_refer(app1,"Appendix A").  
 
 ! Setting up a project
 
@@ -360,6 +398,7 @@ Python:		Twisted?
 Rails:    	3 months. 
 		Uses mvc. Ruby has some nice language features. Framework is backwards, and forces you to repeat yourself many times. A guiding
 		principle is to not repeat yourself (colloquially DRY) and in combination with a poor DSL it can be quite gibberishy.
+                Strongly tied to SQL as data store.
 
 Ruby:		Other?
 
@@ -367,5 +406,37 @@ Perl:		Mason?
 
 PHP:		Cake?
 
+Seaside
 
+
+! Appendix A: Basic SBCL setup
+w_label(appA,"Appendix A: Basic SBCL setup)
+
+I recommend the following SBCL initialization file (on UNIX systems it is w_literal(~/.sbclrc)):
+
+<div class="highlight"><pre><span class="p">(</span><span class="nb">require</span> <span class="ss">:asdf</span><span class="p">)</span>
+<span class="p">(</span><span class="nb">require</span> <span class="ss">:sb-aclrepl</span><span class="p">)</span>
+
+<span class="p">(</span><span class="nv">sb-aclrepl:alias</span> <span class="s">&quot;l&quot;</span> <span class="p">(</span><span class="nv">sys</span><span class="p">)</span> <span class="p">(</span><span class="nv">asdf:operate</span> <span class="ss">&#39;asdf:load-op</span> <span class="nv">sys</span><span class="p">))</span>
+
+<span class="c1">;; automatically deal with stale FASLs</span>
+<span class="p">(</span><span class="nb">defmethod</span> <span class="nv">asdf:perform</span> <span class="ss">:around</span> <span class="p">((</span><span class="nv">o</span> <span class="nv">asdf:load-op</span><span class="p">)</span> <span class="p">(</span><span class="nv">c</span> <span class="nv">asdf:cl-source-file</span><span class="p">))</span>
+    <span class="p">(</span><span class="nb">handler-case</span> <span class="p">(</span><span class="nb">call-next-method</span> <span class="nv">o</span> <span class="nv">c</span><span class="p">)</span>
+      <span class="p">(</span><span class="o">#+</span><span class="nv">sbcl</span> <span class="nv">sb-ext:invalid-fasl</span>
+       <span class="o">#-</span><span class="p">(</span><span class="nb">or</span> <span class="nv">sbcl</span> <span class="nv">allegro</span> <span class="nv">lispworks</span> <span class="nv">cmu</span><span class="p">)</span> <span class="nb">error</span> <span class="p">()</span>
+       <span class="p">(</span><span class="nv">asdf:perform</span> <span class="p">(</span><span class="nb">make-instance</span> <span class="ss">&#39;asdf:compile-op</span><span class="p">)</span> <span class="nv">c</span><span class="p">)</span>
+       <span class="p">(</span><span class="nb">call-next-method</span><span class="p">))))</span>
+</pre></div>
+
+using aclrepl (see also w_url(http://www.sbcl.org/manual/sb_002daclrepl.html))
+rlwrap (w_url(http://freshmeat.net/projects/rlwrap/))
+clbuild
+
+
+! Appendix B: Deployment
+
+detachtty
+screen
+tmux
+remote swank
 

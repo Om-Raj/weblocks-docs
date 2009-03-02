@@ -9,7 +9,7 @@
   (loop for line = (read-line in nil)
         while line
         ;do (format t "line: ~S~%" line)
-        do (if (cl-ppcre:all-matches "^CODE_BEGIN .+$" line)
+        do (if (cl-ppcre:all-matches "^CODE_BEGIN.*$" line)
               (let* ((lines (loop for line = (read-line in)
                                   while line
                                   until (cl-ppcre:all-matches "^CODE_END" line)
