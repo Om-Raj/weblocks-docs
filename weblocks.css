@@ -45,20 +45,13 @@ ul.footnotes {
 /* code highlighting */
 
 div.highlight {
-  font-size:90%;
+  font-size:95%;
+  line-height:1.3em;
+  margin-left:20px;
 }
 
-div.highlight blockquote,
-div.highlight p
-{
-  margin-top:0;
-  margin-bottom:0;
-  padding-top:0;
-  padding-bottom:0;
-}
-
-div.highlight blockquote {
-  margin-left:1.1em;
+pre {
+  margin-bottom:-1em; /* HACK */
 }
 
 dt {
