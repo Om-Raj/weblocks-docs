@@ -1,6 +1,6 @@
 title: Weblocks User Guide
 author: Leslie P. Polzer
-date: 2008-10-30
+date: 27. May 2009
 language: english
 
 w_begdiv(metas)
@@ -9,25 +9,42 @@ dnl <link rel="stylesheet" type="text/css" href="reset.css"/>
 <link rel="stylesheet" type="text/css" href="weblocks.css"/>
 w_enddiv(metas)
 
-This is the user guide to Weblocks.
+dnl define(`ww_symbol',`w_literal(translit($1,`a-z',`A-Z'))')
+define(`ww_symbol',`w_emph(translit($1,`A-Z',`a-z'))')
 
-https://0brg.net/~hraban/blog/2008/a-laymans-guide-to-weblocks
+This is the user's guide to Weblocks.
+
 http://teddyb.org/rlp/tiki-index.php?page!Learning+About+Weblocks
 
-! Installation
+! Introduction
 
-!! Setup your Common Lisp environment
+!! Getting Support
+
+There is both excellent community and professional support available for Weblocks.
+
+Community support is available via the Google group at
+`http://groups.google.com/group/weblocks'.
+
+For commercial support and consulting contact Leslie P. Polzer
+`<'w_link(`mailto:polzer@gnu.org',`w_literal(`polzer@gnu.org')')`>'.
+
+
+!! Installation
+
+!!! Setup your Common Lisp environment
 
 You can skip this section if you already have a comfortable Common Lisp environment.
 
-!!! Common Lisp implementation
+
+!!!! Common Lisp implementation
 
 First you must choose a Common Lisp implementation.
 
 Weblocks is designed and implemented to be portable and should run on the most popular
 Common Lisp implementations. It is currently tested best on SBCL and Clozure CL, though.
 
-!!! Development environment setup
+
+!!!! Development environment setup
 
 There are at least two fundamentally different development approaches for using
 Common Lisp:
@@ -54,14 +71,402 @@ type in your REPL, not by Emacs shortcut as it is often the case.
 
 For a basic comfortable SBCL setup, see w_refer(app1,"Appendix A").  
 
-! Setting up a project
 
-ASD, script, base on demo, ...
+!!!! Installation
 
-! Widgets (basics)
+There is a comprehensive installation guide on the main web site:
 
-!!! Intro
+  http://weblocks.viridian-project.de/installation
 
+
+!! Setting up a project
+
+Weblocks comes with a simple application template generator.
+
+Start your Lisp and run
+
+CODE_BEGIN lisp
+(wop:make-app 'NAME "DIR")
+CODE_END
+
+This will initialize a barebones application called NAME in directory
+DIR.
+
+Another effective way to hack on a new application is copying
+the code of an application from the w_literal(examples/) directory.
+
+
+!! Components of Weblocks
+
+!!! Widgets
+
+Widgets are the main building blocks of Weblocks (hence the name).
+
+At the heart of Weblocks is a tree`'w_footnote(An acyclic graph with exactly one
+parent per node) of widgets that is manipulated by the clients requests. When a
+client sends its first request to a Weblocks application then a new session is
+started for it and a widget tree is associated with this session.
+
+This initial widget tree is computed as defined by the application developer.
+A special function (usually called ww_symbol(init-user-session)) is called by Weblocks
+to initialize a new session. This function then proceeds to set up a
+widget tree by adding children to the root of the widget tree
+(accessible with the macro ww_symbol(root-widget)).
+
+The initial content and structure of the widget tree may depend on arbitrary
+factors; it is conceivable (although probably not very sensible) to generate
+different widget trees depending on the time of day.
+
+A client's request for a specific URI modifies the widget tree: widgets
+called /dispatchers/ choose their one child based on the current request
+URI.
+
+
+!!! Actions
+
+Apart from session initialization the widget tree may be modified by /actions/.
+
+Actions are plain functions that are stored in a session hash table the keys
+of which are unique identifiers. This way they can be called by the browser.
+
+When Javascript is available actions will be called via AJAX, otherwise
+a normal request will be initiated.
+
+It is often useful to set up closures as actions.
+
+Example of typical action usage:
+
+CODE_BEGIN lisp
+(defwidget counter ()
+  ((count :accessor count-of :initform 0)))
+
+(defmethod render-widget-body ((widget my-widget) &rest args)
+  (with-html
+    (:p (esc (format nil "The counter is at ~D." (count-of widget))))
+    (:p (render-link
+         (lambda (&rest args)
+          ;; closes over WIDGET.
+          (incf (count-of widget)))
+         "Count up!"))))
+CODE_END
+
+
+!!! Views
+
+Views provide convenient ways to define how data object are to
+be rendered.
+
+Weblocks currently comes with three types of views: data views, table views
+and form views.
+
+Form views are especially useful because they let you build forms
+in a declarative manner, error checking and reporting included. 
+
+Views mainly consist of a rendering framework unique to the
+view`'w_footnote(The table view for example knows how to render a HTML table.)
+and a series of view fields.
+
+View fields usually map to the slots of your data class but they are
+flexible enough to be used in any other way. Associated with each view field
+irregardless of the view type are things like a human-readable label and
+information on how to render the field (presentation).
+
+Form views include additional parameters like how to translate user
+input to a proper model value (parser) and constraints on the data
+(satisfies).
+
+
+!!! Stores
+
+Weblocks offers a storage framework with several backends. At the
+moment the supported backends are Elephant, cl-prevalence, CLSQL
+and in-memory storage.
+
+You are free to use your own storage mechanisms, however.
+
+
+!!! Applications
+
+One Lisp image may serve multiple web applications at once.
+
+The target web application of a request can be determined based
+on the hostname, the port or the URI for example.
+
+You don't have to worry much about this if you only intend to
+run a single application.
+
+
+!!! HTML and Javascript generation facilities and utilies
+
+Weblocks comes with CL-WHO and Parenscript, two powerful packages
+that provide Lisp compilers for HTML and Javascript.
+
+This means no more munging around with strings, which in turn
+means
+
+  * no more annoying mistakes like forgetting a semicolon
+    or forgetting to close a tag
+
+  * no need to remember infix precedence rules 
+
+  * make full use of Lisps selective quoting facilities
+
+Javascript may still be written as simple strings however.
+This comes in handy sometimes when working with a larger example
+copied from a Javascript library manual.
+
+And you're free to use other facilities as you prefer.
+For example YAML is a function-based HTML generation facility
+that many consider superior to CL-WHO.
+
+
+!!! Continuation-based tools
+
+Some neat features of Weblocks are built on continuations. But don't worry,
+you will only need some high-level understanding of continuations to use
+these features along with some rules of thumb.
+
+
+! Widgets
+
+!! Building a widget
+
+!! Rendering protocol
+
+
+! Forms
+
+Forms enable the user to communicate with a web application.
+
+Usually the server side action boils down to selecting, modifying, creating or
+deleting data sets (this is sometimes abbreviated as CRUD: Create/Read/Update/Delete)
+
+Building  web forms is usually a cumbersome process. Elaborate but complicated
+solutions have been devised`'w_footnote(for example PHP's Quickform extensions),
+but so far we haven't found any of them to match the ease of use and flexibility
+of Weblocks' declarative view DSL.
+
+
+!! Introduction
+
+The form mechanism consists of two parts, the ww_symbol(DATAFORM) widget and
+the ww_symbol(FORM-VIEW) view type.
+
+Forms are usually built by defining form views using the ww_symbol(DEFVIEW) macro
+and instantiating a ww_symbol(DATAFORM) object with this view.
+
+
+!! Simple example
+
+Let's define a view for creating and editing bug reports.
+
+Let the model be defined thus:
+
+CODE_BEGIN lisp
+(defclass bug-report ()
+  ((id :type integer :initform (create-unique-id))
+   (status :type (member :new :open :resolved) :initform :new)
+   (summary :type string)
+   (body :type string)))
+CODE_END
+
+This view should apply to users that are not developers: they may
+enter a summary and body but that's it.
+
+CODE_BEGIN lisp
+(defview bug-report-form-view
+    (:type form :inherit-from '(scaffold bug-report)
+     :caption "Enter a bug report")
+  (id :hidep t)
+  (status :hidep t))
+CODE_END
+
+The ww_symbol(SUMMARY) and ww_symbol(BODY) fields will default to
+strings; every form field is presented as a text input and parsed as a
+string by default.
+
+Let's use this view to derive the view for developers:
+
+CODE_BEGIN lisp
+(defview bug-report-form-view/developer
+    (:type form :inherit-from 'bug-report-form-view )
+  (status :hidep nil))
+CODE_END
+
+The status field will automatically be displayed as a dropdown control
+since the scaffold inspector has decided this upon the slot's type.
+
+You can define scaffolding rules for your own types.  # TODO: document this somewhere.
+
+As part of the validation process Weblocks will also check whether a
+user input matches the slot's type regardless of whether you use
+scaffolding or not.
+
+
+But let's assume that we want custom labels for the dropdown:
+
+CODE_BEGIN lisp
+(defview bug-report-form-view/developer
+    (:type form :inherit-from 'bug-report-form-view )
+  (status :hidep nil
+          :present-as (dropdown :choices '(("This report is totally new, don't trust it!" . :new)
+                                           ("Yeah okay, we're working on it." . :open)
+                                           ("We've solved that problem already..." . :resolved)))))
+CODE_END
+
+
+
+
+
+!! Quickforms
+
+ww_symbol(Quickform)s are specialized ww_symbol(Dataform)s.
+
+They provide a way to build forms based entirely on a view; they are handy
+for operations where you don't have the user working on an actual model instance.
+
+Let's dive right into it:
+
+CODE_BEGIN lisp
+
+CODE_END
+
+
+! Views
+
+!! Syntax of declarative view declaration
+
+The macro ww_symbol(DEFVIEW) is a declarative DSL for defining views.
+
+Syntax:
+
+{{{
+ (defview (NAME [:type TYPE] [:inherit-from INHERIT-FROM]
+                [:satisfies SATISFIES] VIEW-KWARGS...)
+   [FIELD-NAME
+    | (FIELD-NAME [:type FIELD-TYPE] [:initform INITFORM]
+		  [:present-as PRESENT-AS] [:parse-as PARSE-AS]
+		  FIELD-KWARGS...)]...)
+}}}
+
+In the above form, these metasyntactic variables have the following values:
+
+    NAME::
+	When non-nil, an unevaluated unique symbol identifying the
+	view to other parts of the system that require a view,
+	resolving it using `find-view'.
+
+    TYPE::
+	An unevaluated designator for the class of the resulting
+	view (determined by `view-class-name'), and half the
+	designator for the class of this view's fields (determined by
+	`view-field-class-name' applied to `view-default-field-type').
+	Defaults to `data'.
+
+    INHERIT-FROM::
+	A designator for `view' slot `inherit-from'.  Forms
+	like (:scaffold DATA-CLASS) will replace :scaffold with TYPE.
+	See `find-view' for further transformation.
+
+        Evaluated.
+
+    SATISFIES::
+	A designator for `form-view' slot `satisfies'.
+
+        Evaluated.
+
+    VIEW-KWARGS::
+	Other arguments passed directly to `make-instance' for the
+	resulting view, quoting subject to
+	`view-argument-quoting-strategy'.
+
+Argument semantics:
+
+    FIELD-NAME::
+	An unevaluated designator for `view-field' slot `slot-name'.
+
+    FIELD-TYPE::
+	A designator for the class of the field, in combination with
+	TYPE, as explained above for TYPE.
+
+    FIELD-KWARGS::
+	Other arguments passed directly to `make-instance' for the
+	resulting view field, quoting subject to
+	`view-argument-quoting-strategy'.
+
+        However, ww_symbol(FIELD-KWARGS) keywords present in
+        ww_symbol(`*'CUSTOM-VIEW-FIELD-ARGUMENT-COMPILERS*)' are not included in the
+        call to ww_symbol(MAKE-INSTANCE); see that variable for information on
+        how those are transformed.
+
+The built-in custom view fields are as follows:
+
+    INITFORM::
+	A form for `mixin-view-field' slot `initform' (which is
+	really an initfunction).
+
+    PRESENT-AS::
+	A designator for `view-field' slot `presentation'.  The symbol
+	or CAR is mapped to a class name through
+	`presentation-class-name', and the CDR, a series of keyword
+	arguments, is passed to `make-instance' on said class, subject
+	to `view-argument-quoting-strategy'.
+
+    PARSE-AS::
+	A designator for `form-view-field' slot `parser'.  Otherwise
+	similar to PRESENT-AS, but mapping class names using
+	`parser-class-name'."
+
+
+!! Configuring view fields at run-time
+
+
+!! Limitations
+
+
+!!! Available presentations
+
+
+!!! Available parsers
+
+
+! Unsorted
+
+!! Stores
+
+!! Applications
+
+!! HTML generation facilities and utilies
+
+At the moment only CL-WHO is supported out of the box, but YAML and others may
+also be used.
+
+
+! Continuation-based tools
+
+!! A high-level explanation of continuations
+
+
+
+!! How Weblocks uses continuations
+
+Only to replace widgets and remember how to restore the original state. XXX VERIFY
+
+!! Continuation-based tools
+
+!!! Widget replacements
+
+!!! Modal dialogs
+
+!! When to use WITH-CALL/CC and ww_symbol(LAMBDA/CC)
+
+
+! Dynamic scaffolding
+
+!! Customizing scaffolding
+
+
+! Building widgets
 
 Widgets are lisp classes (of metaclass widget) declared using the defwidget
 macro. They are associated with a rendering function, [[ the generic function
@@ -72,10 +477,8 @@ changed, an updated html representation is sent out at the next http request
 div with an id unique to the widget. Mostly one doesn't need to worry about it,
 but see [render-widget-body] for times when you do. ]]
 
-Additionally, widgets can be composed. Thus a widget tree is formed, the root
-of which is given by ''(root-composite)''. Each widget keeps track of its parent,
-and remembers when it has been changed (ie is dirty). Widgets propagate their
-dirty state upwards through the tree of their parents [[ TODO(check) ]].
+Each widget keeps track of its parent, and remembers when it has been changed
+(ie is dirty).
 
 As a convenience, strings and functions also function as widgets -- ie the
 render-widget-body GF is specialized for strings and functions. In practice
@@ -93,16 +496,7 @@ In this case, the widget b will get rendered once, but all updates will be lost!
 
 TODO look at newsgroup for more examples. 
 
-! Questions (infrequent)
-
-Can widgets map to other rendering hierarchies like XUL/SVG? In principle yes. However, all of weblocks assumes one rendering system, based on html. The method of sending updates also relies somewhat on html (or at least a browser/ua that uses JS and http?).
-
-
-! Actions
-
-
-! Dependencies
-
+! Dependency handling
 
 ! HTML generation
 
@@ -133,91 +527,6 @@ and stores it in the global views hash.
 
 so all views are global, and any changes made to one show up in all the others (at least after a refresh of the browser).
 
-!! Views are singletons
-
-this makes it hard to do per-view things. two examples of these per-view things
-you may want to do are:
-
-1. translate labels or use specific labels (perhaps per-session, per-user if users have different language preferences)
-2. use different submit buttons, or fields-suffix and -prefix functions (see the definition of form-view in formview.lisp)
-
-a partial solution is to make the basic view you need with defview, and then
-create an on-the-fly specific view using defview-anon and using the initializer
-:inherit-from '<your-specific-view-name> (there should be only a single quote
-char).
-
-in this case however, you will often have to respecify many things about the view.
-TODO: it appears fields are copied without problem in view inheritance, but *not* other things such as type
-of view, satisfiers etc. (see functions get-object-view-fields and compute-view-field-info-list in utils.lisp)
-
-the solution above is partial because at the moment views are not garbage collected, but this
-is being looked into.
-
-to this view you can adjust labels, fields functions as needed, and it will not
-affect any other view. to use the view you must specifically tell the dataform
-to use it, or use make-quickform -- which lets you specify the view as the
-first parameter.
-
-!! View gotchas
-
-Inside a view, specifying 
-
-does not work -- function calls don't appear to be acceptable (in this example, ''#!"abc"'' expands to ''cl-i18n:translate("abc")'')
-
-!! Fields inside views
-
-views are made up of fields. at rendering time the framework needs both the
-data which this field represents, and the way it is to be presented and parsed,
-which is encoded in the view (in the form of present-as and parse-as, or the
-defaults for that view type).
-
-in addition, a context to the widget that rendering is happening in is maintained,
-thus most functions in the rendering hierarchy will have at least the args
-view, object & widget.
-
-fields are converted into field-info objects at rendering-time, which basically just
-involves encapsulating the actual object into a struct of type field-info.
-
-!! Views inside views
-
-there is a special type of field definition in a view though: one that represents another view to be
-mixed in. in the following defview, this mixin-field is defined for location-details.
-
-(defview enter-details-of-person 
-  (:type form :inherit-from '(:scaffold co-employee) 
-	      :caption "Enter Personal Information" )
-  (location-details :type mixin :view 'location-form-view)
-  (contact-details  :type mixin :view 'contact-form-view)
-  (firstname :label "firstname")
-  (lastname  :label "lastname")
-  (sin   :hidep t)
-  (notes :label "Notes")
-  (company :label "Employer" ))
-
-imagine that the data object this view is defined for consists of several pieces of simple information,
-as well as one sub-object of class location-details, one of contact-details, and one of company. 
-
-in fact the class of the object we want to view could be defined as follows:
-
-(defclass mba-applicant (person)
-  ((firstname        :accessor get-firstname        :initarg :firstname		:initform "")
-   (lastname         :accessor get-lastname         :initarg :lastname		:initform "" :type (or string null))
-   (company          :accessor get-company          :initarg :company		:initform (make-instance 'company :company-name "Facade"))
-   (contact-details  :accessor get-location-details :initarg :location-details	:initform (make-instance 'contact  :cellphone "908" :email "foo@bar.com"))
-   (location-details :accessor get-location-details :initarg :location-details	:initform (make-instance 'location :city "Vatican" :location "Hades"))
-   (sin              :accessor get-sin              :initarg :sin		:initform "wants to be a manager all hoity-toity with an MBA")
-   (notes            :accessor get-notes            :initarg :notes		:initform "made up a 3 billion dollar company to put on his resume")))
-
-firstname et al. would normally be defined inside person. now the :initforms of each field of the class tell us the kind
-of object that is stored there. we can see that some fields are simple (strings, numbers and the like) and some complex
-(structs, objects). the former are represented by normal fields in views, and the latter by mixin fields.
-
-in addition, a :type specifier would also tell us what is permissible to store, as in lastname above. if specified, this is checked in validations.lisp when a form is being deserialized.
-
-!! Getting the value of field data
-
-!! Other ways of getting this value
-
 
 ! CSS generation
 
@@ -241,13 +550,23 @@ Every GF is a hook: subclass, :before, :around, :after
 ! Webapps
 
 
-
 ! Working with continuations
 
 !! Introduction
 !! Widget continuations
 !! Using the high-level interfaces
 
+
+! In-depth Weblocks
+
+Not only useful for those wishing to hack the internals but also to gain
+an understanding of Weblocks that aids in debugging hard problems.
+
+!! Request handler
+
+!! Dispatching mechanism
+
+!! Form pipeline
 
 
 ! Debugging Techniques
@@ -376,17 +695,36 @@ A new wiki is needed?
 
 These are things that are in the process of being re-worked. (This list is more suited to the wiki since it needs updating)
 
-* label-for
-* new navigation system
 * reworking of views and fields
-* reworking widget rendering tree and convenience functions to access it
+
+
+
 ! Framework Comparison
 
 !!! Weblocks compared to other frameworks
 
-This might be a useful chapter to have. To contribute, please put amount of experience with the frameworks you are comparing.
+!!!! At a glance
 
-Weblocks: 1 year, 6 mo. intensive.
+w_beg(table,r,c,c,c,c)
+                                 || Weblocks    || UCW         || Seaside || PLT Webserver || RubyOnRails || Django //
+Language                         || Common Lisp || Common Lisp || Smalltalk || Scheme || Ruby || Python //
+Supports REST                    || Yes         ||  ||  || Yes || Yes || Yes //
+Supports multi-tier dispatch     || Yes         ||  ||  ||  || || //
+AJAX support built-in            || Yes         || Yes (UCW/AJAX) ||  ||  || No || No //
+Degrades gracefully without AJAX || Yes         || No || (N/A) || (N/A) || No || No //
+Scaffolding/DRY                  || Dynamic     || ? || ? || ? || Static || ? //
+Support for non-SQL databases    || Yes         || ? || ? || Yes || No || ? //
+Interactive debugging            || Yes || Yes || Yes || Yes || No || No //
+Bundling/gzipping built-in       || Yes         ||   ||  ||  || No || No //
+Community                        || Small       || Small       ||  ||  || Large || Large //
+Community support                || Yes         ||  ||  ||  || Yes || Yes //
+Commercial support               || Yes         || Yes || Yes ||  || Yes || Yes //
+License                          || LLGPL       ||  || || || ||  //
+w_end(table)
+
+!!!! In-depth comparison
+
+Weblocks
 
 Django:		read basics at djangobook.com
 	  	Django works at a level similar to hunchentoot. A series of urls is mapped to functions. Templates can be used to fill in html.
@@ -409,26 +747,24 @@ PHP:		Cake?
 Seaside
 
 
+
+
 ! Appendix A: Basic SBCL setup
-w_label(appA,"Appendix A: Basic SBCL setup)
+w_label(appA,Appendix A: Basic SBCL setup)
 
 I recommend the following SBCL initialization file (on UNIX systems it is w_literal(~/.sbclrc)):
 
-<div class="highlight"><pre><span class="p">(</span><span class="nb">require</span> <span class="ss">:asdf</span><span class="p">)</span>
-<span class="p">(</span><span class="nb">require</span> <span class="ss">:sb-aclrepl</span><span class="p">)</span>
 
-<span class="p">(</span><span class="nv">sb-aclrepl:alias</span> <span class="s">&quot;l&quot;</span> <span class="p">(</span><span class="nv">sys</span><span class="p">)</span> <span class="p">(</span><span class="nv">asdf:operate</span> <span class="ss">&#39;asdf:load-op</span> <span class="nv">sys</span><span class="p">))</span>
+CODE_BEGIN lisp
+; stale FASLs
+(defmethod asdf:perform :around ((o asdf:load-op) (c asdf:cl-source-file))
+    (handler-case (call-next-method o c)
+      (#+sbcl sb-ext:invalid-fasl
+       #-(or sbcl allegro lispworks cmu) error ()
+       (asdf:perform (make-instance 'asdf:compile-op) c)
+       (call-next-method))))using aclrepl (see also w_url(http://www.sbcl.org/manual/sb_002daclrepl.html))
+CODE_END
 
-<span class="c1">;; automatically deal with stale FASLs</span>
-<span class="p">(</span><span class="nb">defmethod</span> <span class="nv">asdf:perform</span> <span class="ss">:around</span> <span class="p">((</span><span class="nv">o</span> <span class="nv">asdf:load-op</span><span class="p">)</span> <span class="p">(</span><span class="nv">c</span> <span class="nv">asdf:cl-source-file</span><span class="p">))</span>
-    <span class="p">(</span><span class="nb">handler-case</span> <span class="p">(</span><span class="nb">call-next-method</span> <span class="nv">o</span> <span class="nv">c</span><span class="p">)</span>
-      <span class="p">(</span><span class="o">#+</span><span class="nv">sbcl</span> <span class="nv">sb-ext:invalid-fasl</span>
-       <span class="o">#-</span><span class="p">(</span><span class="nb">or</span> <span class="nv">sbcl</span> <span class="nv">allegro</span> <span class="nv">lispworks</span> <span class="nv">cmu</span><span class="p">)</span> <span class="nb">error</span> <span class="p">()</span>
-       <span class="p">(</span><span class="nv">asdf:perform</span> <span class="p">(</span><span class="nb">make-instance</span> <span class="ss">&#39;asdf:compile-op</span><span class="p">)</span> <span class="nv">c</span><span class="p">)</span>
-       <span class="p">(</span><span class="nb">call-next-method</span><span class="p">))))</span>
-</pre></div>
-
-using aclrepl (see also w_url(http://www.sbcl.org/manual/sb_002daclrepl.html))
 rlwrap (w_url(http://freshmeat.net/projects/rlwrap/))
 clbuild
 
@@ -439,4 +775,94 @@ detachtty
 screen
 tmux
 remote swank
+
+! Questions (infrequent)
+
+Can widgets map to other rendering hierarchies like XUL/SVG? In principle yes. However, all of weblocks assumes one rendering system, based on html. The method of sending updates also relies somewhat on html (or at least a browser/ua that uses JS and http?).
+
+
+!! Views are singletons
+
+this makes it hard to do per-view things. two examples of these per-view things
+you may want to do are:
+
+1. translate labels or use specific labels (perhaps per-session, per-user if users have different language preferences)
+2. use different submit buttons, or fields-suffix and -prefix functions (see the definition of form-view in formview.lisp)
+
+a partial solution is to make the basic view you need with defview, and then
+create an on-the-fly specific view using defview-anon and using the initializer
+:inherit-from '<your-specific-view-name> (there should be only a single quote
+char).
+
+in this case however, you will often have to respecify many things about the view.
+TODO: it appears fields are copied without problem in view inheritance, but *not* other things such as type
+of view, satisfiers etc. (see functions get-object-view-fields and compute-view-field-info-list in utils.lisp)
+
+the solution above is partial because at the moment views are not garbage collected, but this
+is being looked into.
+
+to this view you can adjust labels, fields functions as needed, and it will not
+affect any other view. to use the view you must specifically tell the dataform
+to use it, or use make-quickform -- which lets you specify the view as the
+first parameter.
+
+!! View gotchas
+
+Inside a view, specifying 
+
+does not work -- function calls don't appear to be acceptable (in this example, ''#!"abc"'' expands to ''cl-i18n:translate("abc")'')
+
+!! Fields inside views
+
+views are made up of fields. at rendering time the framework needs both the
+data which this field represents, and the way it is to be presented and parsed,
+which is encoded in the view (in the form of present-as and parse-as, or the
+defaults for that view type).
+
+in addition, a context to the widget that rendering is happening in is maintained,
+thus most functions in the rendering hierarchy will have at least the args
+view, object & widget.
+
+fields are converted into field-info objects at rendering-time, which basically just
+involves encapsulating the actual object into a struct of type field-info.
+
+!! Views inside views
+
+there is a special type of field definition in a view though: one that represents another view to be
+mixed in. in the following defview, this mixin-field is defined for location-details.
+
+(defview enter-details-of-person 
+  (:type form :inherit-from '(:scaffold co-employee) 
+	      :caption "Enter Personal Information" )
+  (location-details :type mixin :view 'location-form-view)
+  (contact-details  :type mixin :view 'contact-form-view)
+  (firstname :label "firstname")
+  (lastname  :label "lastname")
+  (sin   :hidep t)
+  (notes :label "Notes")
+  (company :label "Employer" ))
+
+imagine that the data object this view is defined for consists of several pieces of simple information,
+as well as one sub-object of class location-details, one of contact-details, and one of company. 
+
+in fact the class of the object we want to view could be defined as follows:
+
+(defclass mba-applicant (person)
+  ((firstname        :accessor get-firstname        :initarg :firstname		:initform "")
+   (lastname         :accessor get-lastname         :initarg :lastname		:initform "" :type (or string null))
+   (company          :accessor get-company          :initarg :company		:initform (make-instance 'company :company-name "Facade"))
+   (contact-details  :accessor get-location-details :initarg :location-details	:initform (make-instance 'contact  :cellphone "908" :email "foo@bar.com"))
+   (location-details :accessor get-location-details :initarg :location-details	:initform (make-instance 'location :city "Vatican" :location "Hades"))
+   (sin              :accessor get-sin              :initarg :sin		:initform "wants to be a manager all hoity-toity with an MBA")
+   (notes            :accessor get-notes            :initarg :notes		:initform "made up a 3 billion dollar company to put on his resume")))
+
+firstname et al. would normally be defined inside person. now the :initforms of each field of the class tell us the kind
+of object that is stored there. we can see that some fields are simple (strings, numbers and the like) and some complex
+(structs, objects). the former are represented by normal fields in views, and the latter by mixin fields.
+
+in addition, a :type specifier would also tell us what is permissible to store, as in lastname above. if specified, this is checked in validations.lisp when a form is being deserialized.
+
+!! Getting the value of field data
+
+!! Other ways of getting this value
 
