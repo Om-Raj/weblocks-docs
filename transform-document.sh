@@ -1,6 +1,10 @@
 #!/bin/sh
 
 set -e
+set -x
+
+#STX2ANY=/home/sky/projects/stx.pristine/scripts/stx2any
+STX2ANY=stx2any
 
 ### code highlighting preprocessor
 if [ ! -f cl-ppcre.sbcl ]; then
@@ -19,5 +23,5 @@ cat "$1" | ./cl-ppcre.sbcl --no-userinit --load syntax.lisp --noprint --noinform
 
 ### stx2any
 
-stx2any -thtml --table-of-contents on --numbering on tmp > "$1.html"
+$STX2ANY -thtml --table-of-contents on --numbering on tmp > "$1.html"
 
