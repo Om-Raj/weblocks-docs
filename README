@@ -1,10 +1,21 @@
 
-Prerequisites:
+=== Prerequisites
 
-SBCL, Pygments with the `pygmentize' binary, stx2any
+  * SBCL (should be easy to port to another Lisp)
+  * Pygments with the `pygmentize' binary
+  * a modified version of stx2any available at
+
+      http://bitbucket.org/skypher/stx2any/
 
 
-Usage:
+=== Initialization
+
+Build the CL-PPCRE core with
+
+  ./build-ppcre-core.lisp
+
+
+=== Usage
 
   ./transform-document.sh doc.stx
 
@@ -17,4 +28,13 @@ CODE_BEGIN lisp
 CODE_END
 
 will be highlighted as Common Lisp.
+
+The main manual is in user-guide.stx.
+
+
+=== Mark-up documentation
+
+Documentation for the mark-up is at
+
+  http://sange.fi/~atehwa/Stx/examples/Stx-ref.html
 
