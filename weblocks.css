@@ -50,10 +50,6 @@ div.highlight {
   margin-left:20px;
 }
 
-pre {
-  margin-bottom:-1em; /* HACK */
-}
-
 dt {
   font-weight:bold;
   color:#435781;
@@ -63,5 +59,32 @@ dd {
   margin-top:0.5ex;
   margin-bottom:2ex;
   margin-left:1em;
+}
+
+table {
+  border-spacing:3px;
+}
+
+table td {
+  padding:5px;
+  vertical-align:middle;
+}
+
+/* we all love CSS3 */
+table tr:nth-child(1) td {
+  vertical-align:middle;
+  font-weight:bold;
+}
+table tr:nth-child(1) td:nth-child(1) {
+  background-color:transparent !important;
+}
+table td:nth-child(1) {
+  font-style:italic;
+}
+table tr:nth-child(odd) {
+  background-color:#ebecb9;
+}
+table tr:nth-child(even) {
+  background-color:#e3eab7;
 }
 

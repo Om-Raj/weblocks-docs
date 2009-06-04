@@ -23,7 +23,7 @@ http://teddyb.org/rlp/tiki-index.php?page!Learning+About+Weblocks
 There is both excellent community and professional support available for Weblocks.
 
 Community support is available via the Google group at
-`http://groups.google.com/group/weblocks'.
+w_url(`http://groups.google.com/group/weblocks').
 
 For commercial support and consulting contact Leslie P. Polzer
 `<'w_link(`mailto:polzer@gnu.org',`w_literal(`polzer@gnu.org')')`>'.
@@ -69,8 +69,8 @@ We will try to be largely agnostic of the development approach in this manual wh
 means that we tend towards the second approach: Lisp calls are referred to by what you'd
 type in your REPL, not by Emacs shortcut as it is often the case.
 
-For a basic comfortable SBCL setup, see w_refer(app1,"Appendix A").  
-
+For a basic comfortable SBCL setup, see w_refer(appA,`Appendix A').
+ 
 
 !!!! Installation
 
@@ -121,6 +121,9 @@ A client's request for a specific URI modifies the widget tree: widgets
 called /dispatchers/ choose their one child based on the current request
 URI.
 
+There is a convenience function ww_symbol(MAKE-WIDGET) that creates widgets
+from strings (anything that can be printed, in fact) and functions.
+
 
 !!! Actions
 
@@ -151,6 +154,39 @@ CODE_BEGIN lisp
 CODE_END
 
 
+!!! Navigations and dispatchers
+
+Dispatchers are widget that configure themselves and their children
+(i.e. broadly speaking the widget tree) based on the URI of the request.
+
+Navigations are dispatchers that maintain a simple one-to-one association between
+an URI token`'w_footnote(each path component of an URI is a token; for example
+in `"/foo/bar/quux"' there are three tokens foo, bar and quux.) and
+a widget.
+
+Note that each widget can also in turn be a navigation that consumes an
+URI token, thereby building a many-to-many relationship between tokens
+and widgets.
+
+The function ww_symbol(MAKE-NAVIGATION) is a convenience frontend for building
+navigations.
+
+The first argument is a title for the navigation. The rest of the arguments
+map tokens to widgets:
+
+CODE_BEGIN lisp
+(defun init-user-session (root)
+  (setf root (make-navigation "Food Shop"
+                              "Fruits" (make-fruit-navigation)
+                              "Vegetables" (make-vegetables-navigation)
+                              "Billing" (make-instance 'billing-widget :shop-type 'food))))
+CODE_END
+
+ww_symbol(MAKE-WIDGET) is applied to the widget argument so you can use strings
+and function designators`'w_footnote(i.e. symbols naming a global function
+and function objects themselves) instead of widgets in this context.
+
+
 !!! Views
 
 Views provide convenient ways to define how data object are to
@@ -176,13 +212,15 @@ input to a proper model value (parser) and constraints on the data
 (satisfies).
 
 
-!!! Stores
+!! Stores
 
 Weblocks offers a storage framework with several backends. At the
 moment the supported backends are Elephant, cl-prevalence, CLSQL
 and in-memory storage.
 
 You are free to use your own storage mechanisms, however.
+
+w_refer(appC,`Appendix C') offers a comparison of the different stores.
 
 
 !!! Applications
@@ -216,8 +254,10 @@ This comes in handy sometimes when working with a larger example
 copied from a Javascript library manual.
 
 And you're free to use other facilities as you prefer.
-For example YAML is a function-based HTML generation facility
-that many consider superior to CL-WHO.
+For example YACLML`'w_footnote(`Maciej Pasternacki wrote an
+w_link(`http://www.3ofcoins.net/2009/02/07/yaclml-in-pictures-part-i-html-generation/',
+excellent introductory article) about YACLML where he also compares it with CL-WHO')
+is a function-based HTML generation facility that you might want to take a look at.
 
 
 !!! Continuation-based tools
@@ -227,11 +267,26 @@ you will only need some high-level understanding of continuations to use
 these features along with some rules of thumb.
 
 
+
 ! Widgets
 
 !! Building a widget
 
+Most widgets consist of two main parts:
+
+  # a class definition using the ww_symbol(DEFWIDGET) macro.
+
+  # a method for ww_symbol(RENDER-WIDGET-BODY) specialized
+    on the widget's class.
+
+
 !! Rendering protocol
+
+Map over the currently active (by URI) widget tree:
+
+{{{
+  render-widget -> render-widget-body (widget-update-children?)
+}}}
 
 
 ! Forms
@@ -296,7 +351,7 @@ CODE_END
 The status field will automatically be displayed as a dropdown control
 since the scaffold inspector has decided this upon the slot's type.
 
-You can define scaffolding rules for your own types.  # TODO: document this somewhere.
+You can define scaffolding rules for your own types.  dnl TODO: document this somewhere.
 
 As part of the validation process Weblocks will also check whether a
 user input matches the slot's type regardless of whether you use
@@ -432,8 +487,6 @@ The built-in custom view fields are as follows:
 
 ! Unsorted
 
-!! Stores
-
 !! Applications
 
 !! HTML generation facilities and utilies
@@ -452,13 +505,14 @@ also be used.
 
 Only to replace widgets and remember how to restore the original state. XXX VERIFY
 
+
 !! Continuation-based tools
 
 !!! Widget replacements
 
 !!! Modal dialogs
 
-!! When to use WITH-CALL/CC and ww_symbol(LAMBDA/CC)
+!! When to use ww_symbol(WITH-CALL/CC) and ww_symbol(LAMBDA/CC)
 
 
 ! Dynamic scaffolding
@@ -477,14 +531,6 @@ changed, an updated html representation is sent out at the next http request
 div with an id unique to the widget. Mostly one doesn't need to worry about it,
 but see [render-widget-body] for times when you do. ]]
 
-Each widget keeps track of its parent, and remembers when it has been changed
-(ie is dirty).
-
-As a convenience, strings and functions also function as widgets -- ie the
-render-widget-body GF is specialized for strings and functions. In practice
-this leads to a lot of confusion regarding updates and other things, so we
-ignore it for now. Write a widget when you need one, at least while starting.
-
 ! Common Errors
 
 One of the most common problems is missing updates because of a missing widget. 
@@ -492,7 +538,10 @@ The widget can be missing in many ways: one is creating a widget *inside* a rend
 Example: 
 
 
-In this case, the widget b will get rendered once, but all updates will be lost! The solution is to make the widget ''a'' derive from composite [[ ''(defwidget a (composite))'' ]] and then make that last r-w-b call into ''(call-next-method)'' or ''(r-w-b X)'' where ''X'' is the widget of type ''b'' contained within ''a''.
+In this case, the widget b will get rendered once, but all updates will be lost!
+The solution is to make the widget ''a'' derive from composite [[ ''(defwidget a
+(composite))'' ]] and then make that last r-w-b call into ''(call-next-method)''
+or ''(r-w-b X)'' where ''X'' is the widget of type ''b'' contained within ''a''.
 
 TODO look at newsgroup for more examples. 
 
@@ -528,9 +577,17 @@ and stores it in the global views hash.
 so all views are global, and any changes made to one show up in all the others (at least after a refresh of the browser).
 
 
-! CSS generation
+dnl ! CSS generation
+dnl 
+dnl FIXME: implement first ;)
 
-FIXME: implement first ;)
+
+! Working with continuations
+
+!! Introduction
+!! Widget continuations
+!! Using the high-level interfaces
+
 
 ! Adapting Weblocks to your needs
 
@@ -550,12 +607,6 @@ Every GF is a hook: subclass, :before, :around, :after
 ! Webapps
 
 
-! Working with continuations
-
-!! Introduction
-!! Widget continuations
-!! Using the high-level interfaces
-
 
 ! In-depth Weblocks
 
@@ -565,6 +616,40 @@ an understanding of Weblocks that aids in debugging hard problems.
 !! Request handler
 
 !! Dispatching mechanism
+
+!!! Widget tree update mechanism
+
+  The whole tree update protocol goes like this:
+
+  1) HANDLE-NORMAL-REQUEST calls UPDATE-WIDGET-TREE, which walks the
+  tree using WALK-WIDGET-TREE starting at ROOT-WIDGET and calling
+  update-children at every node.
+
+  2) The selector's UPDATE-CHILDREN method (valid for all selectors,
+  i.e. widgets that process URI tokens) calls GET-WIDGET-FOR-TOKENS.
+
+  3) if a widget corresponding to particular URI tokens is found,
+  UPDATE-CHILDREN calls UPDATE-DEPENDENTS, so that the selector (or its
+  subclass) may update its dependents list and do other housekeeping.
+  The default implementation of UPDATE-DEPENDENTS just calls
+  (SETF WIDGET-CHILDREN) to store the children under the :SELECTOR
+  type.
+
+  Usually the only thing you'll want to do if you are implementing your
+  own kind of selector is to subclass selector and provide a
+  GET-WIDGET-FOR-TOKENS method for it. See class ON-DEMAND-SELECTOR for
+  an example."))
+
+
+!!! Selectors
+
+(defgeneric get-widget-for-tokens (selector uri-tokens)
+  (:documentation "Given a list of URI tokens, map them to a widget. All
+  selectors implement this method. There can be multiple strategies for
+  mapping URI tokens to widgets: static maps, dynamically-generated
+  widgets, dynamically-generated widgets with caching. Returns a widget
+  or NIL if not found. Modifies URI-TOKENS.
+
 
 !! Form pipeline
 
@@ -590,9 +675,7 @@ Run a specific test case: (run-test :test-case 'make-dialog-js-3 :suite 'composi
 http://lighthouseapp.com/help/setting-up-subversion-integration
 
 
-! Weblocks Community
-
-!!! Weblocks community
+! Working on Weblocks
 
 !! Mercurial Bitbucket 
 
@@ -612,7 +695,8 @@ hg commit
 hg push
 .. push them out to the parent, and your changes are now safely stored at bitbucket ..
 
-! Contributing changes 
+
+!! Contributing changes 
 
 This section paraphrased from jespern at #bitbucket.org -- thanks!
 
@@ -652,6 +736,7 @@ any more?
 <jespern> if you just want to contribute and keep the mainline up to date, you
 	  may want to consider working on a patch queue instead of a fork
 
+
 !! Frequent newbie hg issue
 
 (This section paraphrased from conversation with Leslie Polzer -- thanks!).
@@ -689,67 +774,14 @@ lighthouse.
 
 A new wiki is needed?
 
+
 !! Tutorials, sites, blogs
 
-!! In progress enhancements
-
-These are things that are in the process of being re-worked. (This list is more suited to the wiki since it needs updating)
-
-* reworking of views and fields
 
 
+! Hints
 
-! Framework Comparison
-
-!!! Weblocks compared to other frameworks
-
-!!!! At a glance
-
-w_beg(table,r,c,c,c,c)
-                                 || Weblocks    || UCW         || Seaside || PLT Webserver || RubyOnRails || Django //
-Language                         || Common Lisp || Common Lisp || Smalltalk || Scheme || Ruby || Python //
-Supports REST                    || Yes         ||  ||  || Yes || Yes || Yes //
-Supports multi-tier dispatch     || Yes         ||  ||  ||  || || //
-AJAX support built-in            || Yes         || Yes (UCW/AJAX) ||  ||  || No || No //
-Degrades gracefully without AJAX || Yes         || No || (N/A) || (N/A) || No || No //
-Scaffolding/DRY                  || Dynamic     || ? || ? || ? || Static || ? //
-Support for non-SQL databases    || Yes         || ? || ? || Yes || No || ? //
-Interactive debugging            || Yes || Yes || Yes || Yes || No || No //
-Bundling/gzipping built-in       || Yes         ||   ||  ||  || No || No //
-Community                        || Small       || Small       ||  ||  || Large || Large //
-Community support                || Yes         ||  ||  ||  || Yes || Yes //
-Commercial support               || Yes         || Yes || Yes ||  || Yes || Yes //
-License                          || LLGPL       ||  || || || ||  //
-w_end(table)
-
-!!!! In-depth comparison
-
-Weblocks
-
-Django:		read basics at djangobook.com
-	  	Django works at a level similar to hunchentoot. A series of urls is mapped to functions. Templates can be used to fill in html.
-		Uses mvc.
-
-Python:		Twisted?
-		Google App Engine?
-
-Rails:    	3 months. 
-		Uses mvc. Ruby has some nice language features. Framework is backwards, and forces you to repeat yourself many times. A guiding
-		principle is to not repeat yourself (colloquially DRY) and in combination with a poor DSL it can be quite gibberishy.
-                Strongly tied to SQL as data store.
-
-Ruby:		Other?
-
-Perl:		Mason?
-
-PHP:		Cake?
-
-Seaside
-
-
-
-
-! Appendix A: Basic SBCL setup
+!! Basic SBCL setup
 w_label(appA,Appendix A: Basic SBCL setup)
 
 I recommend the following SBCL initialization file (on UNIX systems it is w_literal(~/.sbclrc)):
@@ -769,17 +801,150 @@ rlwrap (w_url(http://freshmeat.net/projects/rlwrap/))
 clbuild
 
 
-! Appendix B: Deployment
+!! Deployment
 
 detachtty
 screen
 tmux
 remote swank
 
-! Questions (infrequent)
 
-Can widgets map to other rendering hierarchies like XUL/SVG? In principle yes. However, all of weblocks assumes one rendering system, based on html. The method of sending updates also relies somewhat on html (or at least a browser/ua that uses JS and http?).
+!! Store comparison
+w_label(appC,Appendix C: Store comparison)
 
+Different stores have different merits. Here's a short comparison.
+
+
+!!! cl-prevalence
+
+This library embodies the prevalence database strategy:
+Everything is kept in main memory; all writes are logged
+to disk, and the in-memory database is restored with the
+aid of the log at initialization time.
+
+!!!! Advantages
+
+  * This means excellent speed
+    and seamless integration with CL as query language.
+
+
+!!!! Disadvantages
+
+  * No transaction support for objects in memory.
+
+  * Database size limited by size of virtual memory.
+
+  * No load balancing capabilities (but you can run the
+    database on a separate machine)
+
+!!!! Bottom line
+
+Prevalence is a great library to start with because you
+can do carefree prototyping and also run production sites.
+
+w_strong(Important note:) The original version of cl-prevalence has
+some bugs that prevent is from working reliably when used with Weblocks.
+
+It is recommended to use the fork at
+w_url(`http://bitbucket.org/skypher/cl-prevalence/')
+where this problem has been remedied.
+
+
+!!! Elephant
+
+Elephant is based on a key-value database model (like SQL servers)
+It offers convenient CLOS integration and decent speed.
+
+!!!! Advantages
+
+  * Transactions affect in-memory objects.
+
+  * Excellent support for schema updates: Elephant manages
+    most issues on its own even across process boundaries.
+    Special cases (slot migration/deletion) can be specified
+    by the user by hooking into the MOP.
+
+  * Queries are formulated completely in CL.
+
+!!!! Negatives
+
+  * Less speed than cl-prevalence especially with a high
+    number of slot accesses.
+
+  * Watch out when handling primitive types like arrays
+    and conses, Elephant doesn't have its hooks in there.
+
+  * BDB backend: load balancing not easily realized.
+
+  * PostgreSQL backend: incomplete support for sorting
+    values containing NIL.
+
+!!!! Bottom line
+
+Not as easy to set up as cl-prevalence, but a great library
+to work with.
+
+
+!!! CLSQL
+
+The CLSQL store relies on the popular SQL ecosystem. This means
+proven client-server management systems like PostgreSQL, hosts
+of excellent tools and great interoperability.
+
+On the negative side SQL has an impedance mismatch when matched
+against object-oriented data structures.
+
+You cannot use CL as a query language either, CLSQL only provides
+a Lispy layer over SQL.
+
+
+!! Weblocks compared to other frameworks
+
+!!! At a glance
+
+w_beg(table,r,c,c,c,c,c,c)
+                                 || Weblocks    || UCW/AJAX         || Seaside || PLT Webserver || RubyOnRails || Django //
+Language                         || Common Lisp || Common Lisp || Smalltalk || Scheme || Ruby || Python //
+Supports REST                    || Yes         ||  ||  || Yes || Yes || Yes //
+Supports multi-tier dispatch     || Yes         ||  ||  ||  || || //
+AJAX support built-in            || Yes         || Yes ||  ||  || No || No //
+Degrades gracefully without AJAX || Yes         || No || (N/A) || (N/A) || No || No //
+Scaffolding/DRY                  || Dynamic     ||  ||  || No || Static || //
+Support for non-SQL databases    || Yes         ||  ||  || Yes || No || //
+Interactive debugging            || Yes         || Yes || Yes || Yes || No || No //
+Bundling/compression built-in    || Yes         ||   ||  ||  || No || No //
+Community                        || Tiny        || Tiny  ||  Small || Small || Medium || Medium //
+Community support                || Yes         ||  ||  ||  || Yes || Yes //
+Commercial support               || Yes         || Yes || Yes ||  || Yes || Yes //
+License                          || LLGPL       ||  || || || ||  //
+w_end(table)
+
+!!! In-depth comparison
+
+Weblocks
+
+Django:		read basics at djangobook.com
+	  	Django works at a level similar to hunchentoot. A series of urls is mapped to functions. Templates can be used to fill in html.
+		Uses mvc.
+
+Python:		Twisted?
+		Google App Engine?
+
+Rails:    	Uses mvc. Ruby has some nice language features. Framework is backwards, and forces you to repeat yourself many times. A guiding
+		principle is to not repeat yourself (colloquially DRY) and in combination with a poor DSL it can be quite gibberishy.
+                Strongly tied to SQL as data store.
+
+Ruby:		Other?
+
+Perl:		Mason?
+
+PHP:		Cake?
+
+Seaside
+
+
+
+! Assorted stuff
 
 !! Views are singletons
 
