@@ -11,6 +11,30 @@ body {
 }
 
 
+/* TOC */
+
+#toc ul {
+  font-family:sans-serif;
+  list-style:none;
+}
+
+#toc li {
+  margin-top:0.4ex;
+  color:#3f92d2;
+  font-weight:bold;
+}
+
+#toc > ul > li {
+  margin-top:1.5ex;
+  font-size:1.6em;
+  color:#5a7abb;
+}
+
+#toc a:link {
+  text-decoration:none;
+  color:inherit;
+}
+
 /* headings */
 
 h1,h2,h3,h4,h5,h6 {
