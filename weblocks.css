@@ -30,7 +30,7 @@ body {
   color:#5a7abb;
 }
 
-#toc a:link {
+#toc a:link, a:active, a:visited {
   text-decoration:none;
   color:inherit;
 }
