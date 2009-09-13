@@ -330,7 +330,7 @@ enter a summary and body but that's it.
 
 CODE_BEGIN lisp
 (defview bug-report-form-view
-    (:type form :inherit-from '(scaffold bug-report)
+    (:type form :inherit-from '(:scaffold bug-report)
      :caption "Enter a bug report")
   (id :hidep t)
   (status :hidep t))
