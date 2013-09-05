@@ -1,1 +1,0 @@
-/home/sky/projects/lisp/weblocks/manual/clbuild/source/cl-unicode/cl-unicode.asd

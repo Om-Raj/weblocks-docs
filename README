@@ -32,6 +32,11 @@ will be highlighted as Common Lisp.
 The main manual is in user-guide.stx.
 
 
+  ./gen-style.sh 
+
+  Will generate stylesheet for document
+
+
 === Mark-up documentation
 
 Documentation for the mark-up is at
