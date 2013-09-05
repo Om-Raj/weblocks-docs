@@ -25,8 +25,8 @@ There is both excellent community and professional support available for Weblock
 Community support is available via the Google group at
 w_url(`http://groups.google.com/group/weblocks').
 
-For commercial support and consulting contact Leslie P. Polzer
-`<'w_link(`mailto:polzer@gnu.org',`w_literal(`polzer@gnu.org')')`>'.
+For commercial support and consulting contact Olexiy A. Zamkoviy
+`<'w_link(`mailto:olexiy.z@gmail.com',`w_literal(`olexiy.z@gmail.com')')`>'.
 
 
 !! Installation
@@ -51,7 +51,7 @@ Common Lisp:
 
   # Editor-centric development: you access all Lisp functions from within your editor.
 
-    Example: Emacs/Slime, Vim/Limp, Lispworks/IDE.
+    Example: Emacs/Slime, Vim/Slimv, Lispworks/IDE.
     
     Incremental development happens mainly on the S-Expression level. This means that you
     edit a SEXP and send it with the help of editor directly to your Lisp image, which
@@ -76,7 +76,7 @@ For a basic comfortable SBCL setup, see w_refer(appA,`Appendix A').
 
 There is a comprehensive installation guide on the main web site:
 
-  http://weblocks.viridian-project.de/installation
+  http://weblocks-framework.info/installation
 
 
 !! Setting up a project
@@ -156,7 +156,7 @@ CODE_END
 
 !!! Navigations and dispatchers
 
-Dispatchers are widget that configure themselves and their children
+Dispatchers are widgets that configure themselves and their children
 (i.e. broadly speaking the widget tree) based on the URI of the request.
 
 Navigations are dispatchers that maintain a simple one-to-one association between
@@ -176,10 +176,10 @@ map tokens to widgets:
 
 CODE_BEGIN lisp
 (defun init-user-session (root)
-  (setf root (make-navigation "Food Shop"
-                              "Fruits" (make-fruit-navigation)
-                              "Vegetables" (make-vegetables-navigation)
-                              "Billing" (make-instance 'billing-widget :shop-type 'food))))
+  (setf (widget-children root) (make-navigation "Food Shop"
+                                "Fruits" (make-fruit-navigation)
+                                "Vegetables" (make-vegetables-navigation)
+                                "Billing" (make-instance 'billing-widget :shop-type 'food))))
 CODE_END
 
 ww_symbol(MAKE-WIDGET) is applied to the widget argument so you can use strings
@@ -217,6 +217,11 @@ input to a proper model value (parser) and constraints on the data
 Weblocks offers a storage framework with several backends. At the
 moment the supported backends are Elephant, cl-prevalence, CLSQL
 and in-memory storage.
+There is also weblocks-montezuma with supporting montezuma index as store 
+and weblocks-custom which offers wrapping custom data structures 
+into store models and their instances.
+
+Weblocks standard widgets are tied to weblocks storage framework.
 
 You are free to use your own storage mechanisms, however.
 
@@ -259,6 +264,16 @@ w_link(`http://www.3ofcoins.net/2009/02/07/yaclml-in-pictures-part-i-html-genera
 excellent introductory article) about YACLML where he also compares it with CL-WHO')
 is a function-based HTML generation facility that you might want to take a look at.
 
+!!! Weblocks templates 
+
+Weblocks uses templates. 
+This is primarily for making weblocks themable.
+Templates are not views but used in views.
+Template is just a function with &key parameters, so you can use any template engine you like.
+It is good practice to use logic-less templates - templates with minimal count if/loop statements
+and without computations inside template function.
+CL-WHO is used in all default templates. 
+You can override default templates with new ones to receive new application look.
 
 !!! Continuation-based tools
 
@@ -484,7 +499,64 @@ The built-in custom view fields are as follows:
 !!! Available presentations
 
 
+input::
+Renders form text input
+
+textarea::
+Renders textarea
+
+checkbox::
+Renders form single checkbox, used for boolean values
+
+checkboxes::
+Renders several checkboxes - several choices from several variants
+
+dropdown::
+Renders a dropdown - single choice from few variants
+
+radio::
+Renders radio buttons - single choice from few variants
+
+date-entry::
+Renders custom control for date input. 
+
+file-upload::
+Renders input with type file
+
+password::
+Renders input with type password
+
+widget::
+Renders widget as form field. You should provide get-widget-form-value-from-request method for widget to parse value.
+
+
 !!! Available parsers
+
+text::
+Used with input presentation
+
+number::
+Used with input presentation for parsing numbers
+
+integer::
+Used with input presentation for parsing integer numbers
+
+float::
+Used with input presentation for parsing float numbers
+
+symbol::
+Transforms string value into symbol
+
+keyword::
+Transforms string value into keyword
+
+checkboxes::
+Used with checkboxes-presentation
+
+predicate::
+Used with checkbox-presentation
+
+object-id::
 
 
 ! Continuation-based tools
@@ -511,7 +583,7 @@ Only to replace widgets and remember how to restore the original state. XXX VERI
 
 ! HTML generation
 
-At the moment only CL-WHO is supported out of the box, but YAML and others may
+At the moment only CL-WHO is supported out of the box, but YACLML and others may
 also be used.
 
 
