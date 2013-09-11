@@ -1,6 +1,6 @@
 title: Weblocks User Guide
-author: Leslie P. Polzer
-date: 27. May 2009
+author: Leslie P. Polzer, Olexiy A. Zamkoviy
+date: 11. Sep 2013
 language: english
 
 w_begdiv(metas)
@@ -14,7 +14,7 @@ define(`ww_symbol',`w_emph(translit($1,`A-Z',`a-z'))')
 
 This is the user's guide to Weblocks.
 
-http://teddyb.org/rlp/tiki-index.php?page!Learning+About+Weblocks
+w_url(`http://teddyb.org/rlp/tiki-index.php?page=Learning+About+Weblocks')
 
 ! Introduction
 
@@ -76,12 +76,13 @@ For a basic comfortable SBCL setup, see w_refer(appA,`Appendix A').
 
 There is a comprehensive installation guide on the main web site:
 
-  http://weblocks-framework.info/installation
+  w_url(`http://weblocks-framework.info/installation')
 
 
 !! Setting up a project
 
 Weblocks comes with a simple application template generator.
+There is a script for quick project setting on w_url(`http://weblocks-framework.info/installation') which installs Weblocks and generates application with template generator.
 
 Start your Lisp and run
 
@@ -161,7 +162,7 @@ Dispatchers are widgets that configure themselves and their children
 
 Navigations are dispatchers that maintain a simple one-to-one association between
 an URI token`'w_footnote(each path component of an URI is a token; for example
-in `"/foo/bar/quux"' there are three tokens foo, bar and quux.) and
+in `"/foo/bar/quux"' there are three tokens foo bar and quux.) and
 a widget.
 
 Note that each widget can also in turn be a navigation that consumes an
@@ -199,8 +200,7 @@ Form views are especially useful because they let you build forms
 in a declarative manner, error checking and reporting included. 
 
 Views mainly consist of a rendering framework unique to the
-view`'w_footnote(The table view for example knows how to render a HTML table.)
-and a series of view fields.
+view and a series of view fields. The table view for example knows how to render a HTML table.
 
 View fields usually map to the slots of your data class but they are
 flexible enough to be used in any other way. Associated with each view field
@@ -211,6 +211,115 @@ Form views include additional parameters like how to translate user
 input to a proper model value (parser) and constraints on the data
 (satisfies).
 
+!!! Templates 
+
+Template is something different from view.
+It is another layer which allows to customize views look.
+Most of weblocks code support templates and this gives us ability to change widget html without changing widget logic.
+We get rid of method overriding for widgets and override only template.
+Templates  bring theming functionality into Weblocks, can be used to simplify some debugging work and to improve widgets reusing.
+
+You can build your own widgets without templates. 
+
+Templates are necessary for widgets which you want to be reused. Weblocks contains much of such widgets.
+
+Also if you want to make your own Weblocks theme you should use templates.
+
+Template is ...
+
+    # template function
+    # template definition 
+
+And templates should be rendered inside of widgets.
+
+!!!! Template function
+
+Template function should receive some key parameters and return html string.
+You can use any html generation library or template library for templates. 
+
+We encourage you to 
+
+    # use naming convention and call template ww_symbol(*-wt) (with "-wt" suffix ). "wt" means either "web template" or "Weblocks template". Since template should be overriden often, name convention will made easier to find what we need.
+    # use ww_symbol(&allow-other-keys) in every template.
+    # use no complex logic and no computations in templates. Just simple iteration over lists and if statements when you use cl-who. The best thing would be to use no more logic then in mustache templates w_url(`http://mustache.github.io/mustache.5.html') 
+    For cl-who ww_symbol(format), ww_symbol(concatenate) and other string functions could be used (concatenation is allowed), but avoid to use number operations.
+
+Here is template example.
+CODE_BEGIN lisp
+(defun my-wt(&key (content "I'm template") &allow-other-keys)
+    (with-html-to-string 
+        (:p (str content))))
+CODE_END
+
+!!!! Template definition 
+
+Template definition is a ww_symbol(deftemplate) call. 
+
+CODE_BEGIN lisp
+(deftemplate :my-wt 'my-wt)
+CODE_END
+
+Here we just connected ww_symbol(:my-wt) template name with template function ww_symbol('my-wt).
+
+And here comes most important templates part.
+We can connect many template functions to template name and only one of them - effective template - will be called.
+Effectiveness determined by priority which is received from context matchers. 
+Context matcher just receives context and returns priority number.
+
+CODE_BEGIN lisp
+(defun my-other-wt(&key (content "I'm template") &allow-other-keys)
+  (with-html-to-string 
+    (:div :class "other-template" (str content))))
+
+(deftemplate :my-wt 'my-other-wt 
+  :context-matches (lambda(&rest context)
+    100))
+CODE_END
+
+ww_symbol(my-other-wt) has more priority than ww_symbol(my-wt) so it will be called. 
+And this is how template overriding is done.
+
+There is also ww_symbol(:application-class) parameter which gives template 10 more priority points.
+
+CODE_BEGIN lisp
+(deftemplate :page-wt 'my-customized-page-wt 
+             :application-class 'my-webapp)
+CODE_END
+
+Here ww_symbol('my-customized-page-wt) function will have more priority than one defined in Weblocks.
+
+The source of Weblocks Twitter Bootstrap theme w_url(`https://github.com/html/weblocks-twitter-bootstrap-application') is mostly templates and their definitions. Look there for more examples.
+
+!!!! Template rendering 
+
+Template rendering is done via two functions - ww_symbol(`RENDER-WT') and ww_symbol(`RENDER-WT-TO-STRING'). First one renders template to ww_symbol(`*weblocks-output-stream*'), other one returns a string with rendered template.
+
+Rendering function takes template name, template context parameters and other arguments which are passed to template function.
+
+CODE_BEGIN lisp
+(render-wt 
+    :checkbox-wt 
+    (list :name name :id id :class class)
+    :name (attributize-name name)
+    :id id 
+    :class class
+    :value (if checkedp "t" "f")
+    :checkedp checkedp 
+    :onclick onclick
+    :disabledp disabledp)
+CODE_END
+
+First, render function will get all templates associated to ww_symbol(:checkbox-wt), then will get every template priority based on context, will choose effective template and call it with parameters 
+
+CODE_BEGIN lisp
+    :name (attributize-name name)
+    :id id 
+    :class class
+    :value (if checkedp "t" "f")
+    :checkedp checkedp 
+    :onclick onclick
+    :disabledp disabledp
+CODE_END
 
 !! Stores
 
@@ -264,16 +373,6 @@ w_link(`http://www.3ofcoins.net/2009/02/07/yaclml-in-pictures-part-i-html-genera
 excellent introductory article) about YACLML where he also compares it with CL-WHO')
 is a function-based HTML generation facility that you might want to take a look at.
 
-!!! Weblocks templates 
-
-Weblocks uses templates. 
-This is primarily for making weblocks themable.
-Templates are not views but used in views.
-Template is just a function with &key parameters, so you can use any template engine you like.
-It is good practice to use logic-less templates - templates with minimal count if/loop statements
-and without computations inside template function.
-CL-WHO is used in all default templates. 
-You can override default templates with new ones to receive new application look.
 
 !!! Continuation-based tools
 
@@ -465,7 +564,7 @@ Argument semantics:
 	`view-argument-quoting-strategy'.
 
         However, ww_symbol(FIELD-KWARGS) keywords present in
-        ww_symbol(`*'CUSTOM-VIEW-FIELD-ARGUMENT-COMPILERS*)' are not included in the
+        ww_symbol(`*'CUSTOM-VIEW-FIELD-ARGUMENT-COMPILERS*) are not included in the
         call to ww_symbol(MAKE-INSTANCE); see that variable for information on
         how those are transformed.
 
@@ -580,6 +679,22 @@ Only to replace widgets and remember how to restore the original state. XXX VERI
 
 
 ! Dependency handling
+
+!! Automatically installing external dependencies
+
+Currently Weblocks external dependencies are handled with "Weblocks assets" mechanism, see w_url(`https://github.com/html/weblocks-utils#weblocks-assets-packages'). 
+
+It is not in Weblocks repository until it will be well tested. 
+
+At this moment mechanism works well and solves problem of automatically installing external dependencies.
+
+There is no similar solution found for other frameworks and it gives much comfort of reusing Weblocks widgets.
+
+
+!! Require dependencies for widgets
+
+Weblocks has its dependency mechanism, it is responsible for rendering links to javascript or css inside of pages.
+
 
 ! HTML generation
 
