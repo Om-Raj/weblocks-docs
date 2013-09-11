@@ -497,8 +497,27 @@ for operations where you don't have the user working on an actual model instance
 Let's dive right into it:
 
 CODE_BEGIN lisp
-
+(make-quickform 
+  (defview nil 
+    (:caption "A Quickform" :type form :persistp nil)
+    (some-text  :present-as input))
+  :on-success (lambda (form data)
+    (with-html 
+      "Submitted data - "
+      (str (slot-value data 'some-text)))))
 CODE_END
+
+This will display form with single field. After form submit we'll see text with value submitted.
+ww_symbol(data) object here is a class created dynamically from view fields.
+
+CODE_BEGIN lisp
+:persistp nil
+CODE_END 
+
+in view definition is necessary, we don't want dynamic class to persist.
+
+There are options in ww_symbol(make-quickform) for validation, control flow and other things.
+See ww_symbol(make-quickform) documentation (w_url(`http://quickdocs.org/weblocks/api'))
 
 
 ! Views
@@ -693,13 +712,44 @@ There is no similar solution found for other frameworks and it gives much comfor
 
 !! Require dependencies for widgets
 
-Weblocks has its dependency mechanism, it is responsible for rendering links to javascript or css inside of pages.
+Weblocks has its dependency mechanism, it is responsible for rendering links to javascript or css files inside of pages.
 
+There is other dependencies mechanism which has it's own advantages but it is not considered stable yet.
+
+!!! Weblocks standard dependencies
+
+Each widget and application itself can have dependencies. 
+Application dependencies are always present on the page.
+Widget dependencies get into page during particular widgets rendering.
+
+Currently there are following dependency classes - ww_symbol(script-dependency) for javascript files, ww_symbol(stylesheet-dependency) for css files and ww_symbol(javascript-code-dependency) for javascript code.
+
+See documentation for more usage information (w_url(`http://quickdocs.org/weblocks/api'))
+
+
+!!! jQuery-seq dependencies (not stable)
+
+If you know javascript well you can use jQuery-seq (w_url(`https://github.com/html/jquery-seq')) for dependencies loading. 
+
+Just evaluate your javascript code inside withScripts and withStyles calls (see jQuery-seq documentation).
+
+For jQuery-seq dependencies you need to include jQuery-seq itself in application dependencies. 
+
+Before including library we should get it served from http.
+
+The easiest way to do this is to install Weblocks assets package jquery-seq.
+Other way is to download jQuery-seq, to put it into pub/scripts/ directory.
 
 ! HTML generation
 
 At the moment only CL-WHO is supported out of the box, but YACLML and others may
 also be used.
+
+See ww_symbol(with-html), ww_symbol(with-html-to-string) for pure html rendering with cl-who.
+See ww_symbol(with-javascript), ww_symbol(with-javascript-to-string), ww_symbol(send-script) for rendering javascript code inside of script tags.
+
+For javascript there are some other helpers ww_symbol(noscript) and ww_symbol(scriptonly)
+
 
 
 !! CL-WHO
@@ -883,7 +933,7 @@ Prevalence is a great library to start with because you
 can do carefree prototyping and also run production sites.
 
 w_strong(Important note:) The original version of cl-prevalence has
-some bugs that prevent is from working reliably when used with Weblocks.
+some bugs that prevent it from working reliably when used with Weblocks.
 
 It is recommended to use the fork at
 w_url(`http://bitbucket.org/skypher/cl-prevalence/')
